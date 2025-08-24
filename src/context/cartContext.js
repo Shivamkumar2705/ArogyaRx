@@ -1,6 +1,7 @@
 // context/cartContext.js
 import React, { createContext, useState, useContext, useEffect } from 'react';
 import API from '../services/api';
+import { isAuthenticated, handleApiError } from '../utils/apiHelpers';
 
 const CartContext = createContext();
 
@@ -15,6 +16,13 @@ export const CartProvider = ({ children }) => {
 
   const fetchCart = async () => {
     try {
+      // Check if user is authenticated
+      if (!isAuthenticated()) {
+        console.log('User not authenticated, skipping cart fetch');
+        setCartItems([]);
+        return;
+      }
+
       const res = await API.get('/cart');
       const items = res.data.items.map(item => ({
         ...item,
@@ -23,6 +31,10 @@ export const CartProvider = ({ children }) => {
       setCartItems(items);
     } catch (err) {
       console.error('Error fetching cart:', err);
+      // If it's an auth error, clear the cart
+      if (err.response?.status === 401) {
+        setCartItems([]);
+      }
     } finally {
       setLoading(false);
     }
@@ -40,6 +52,12 @@ export const CartProvider = ({ children }) => {
 
   const updateCart = async () => {
     try {
+      // Check if user is authenticated
+      if (!isAuthenticated()) {
+        console.log('User not authenticated, skipping cart update');
+        return;
+      }
+
       const res = await API.get('/cart');
       const items = res.data.items.map(item => ({
         ...item,
@@ -48,12 +66,21 @@ export const CartProvider = ({ children }) => {
       setCartItems(items);
     } catch (err) {
       console.error('Error updating cart:', err);
-      alert('Failed to update cart. Please try again.');
+      // Don't show alert for auth errors
+      if (err.response?.status !== 401) {
+        alert(handleApiError(err, 'Failed to update cart. Please try again.'));
+      }
     }
   };
 
   const handleQuantityChange = async (itemId, change) => {
     try {
+      // Check if user is authenticated
+      if (!isAuthenticated()) {
+        alert('Please login to manage your cart');
+        return;
+      }
+
       const item = cartItems.find(item => item.medicineId._id === itemId);
       const newQuantity = item.quantity + change;
 
@@ -68,17 +95,23 @@ export const CartProvider = ({ children }) => {
       await updateCart();
     } catch (err) {
       console.error('Error updating cart:', err);
-      alert('Failed to update cart. Please try again.');
+      alert(handleApiError(err, 'Failed to update cart. Please try again.'));
     }
   };
 
   const handleRemoveItem = async (itemId) => {
     try {
+      // Check if user is authenticated
+      if (!isAuthenticated()) {
+        alert('Please login to manage your cart');
+        return;
+      }
+
       await API.post('/cart/remove', { medicineId: itemId });
       await updateCart();
     } catch (err) {
       console.error('Error removing item:', err);
-      alert('Failed to remove item. Please try again.');
+      alert(handleApiError(err, 'Failed to remove item. Please try again.'));
     }
   };
 

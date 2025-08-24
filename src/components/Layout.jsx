@@ -76,7 +76,7 @@ const Layout = ({ children }) => {
       {isMobile && <div className="h-16"></div>}
       
       {/* Add mobile-specific styles */}
-      <style jsx global>{`
+      <style jsx="true" global="true">{`
         /* Improve tap targets for mobile */
         @media (max-width: 768px) {
           button, 

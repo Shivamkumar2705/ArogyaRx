@@ -2,7 +2,6 @@ import { useState, useEffect } from 'react';
 import API from '../../services/api';
 import MedicineCard from '../medicines/MedicineCard';
 import MedicineDetailsModal from './MedicineDetailsModal';
-import { useTranslation } from 'react-i18next';
 
 const MedicineList = () => {
   const [medicines, setMedicines] = useState([]);
@@ -16,11 +15,14 @@ const MedicineList = () => {
       setLoading(true);
       setError(null);
       try {
-        const res = await API.get('/medicines/dashboard');
-        setMedicines(res.data);
+        const res = await API.get('/medicines/public');
+        // Use utility function to safely extract data
+        const medicinesData = safeExtractData(res, 'data');
+        setMedicines(medicinesData);
       } catch (err) {
         console.error('Error fetching medicines:', err);
-        setError('Failed to load medicines. Please try again later.');
+        setError(handleApiError(err, 'Failed to load medicines. Please try again later.'));
+        setMedicines([]); // Ensure medicines is always an array
       } finally {
         setLoading(false);
       }
@@ -29,8 +31,7 @@ const MedicineList = () => {
   }, []);
 
   const handleAddToCart = async (medicine, quantity = 1) => {
-    const isLoggedIn = !!localStorage.getItem('accessToken');
-    if (!isLoggedIn) {
+    if (!isAuthenticated()) {
       alert('Please login to add items to your cart');
       return;
     }
@@ -44,7 +45,7 @@ const MedicineList = () => {
       window.location.reload();
     } catch (err) {
       console.error('Error adding to cart:', err);
-      alert('Failed to add item to cart. Please try again.');
+      alert(handleApiError(err, 'Failed to add item to cart. Please try again.'));
     }
   };
 
@@ -84,7 +85,7 @@ const MedicineList = () => {
         </div>
       ) : (
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 sm:gap-6">
-          {medicines.map((medicine) => (
+          {Array.isArray(medicines) && medicines.map((medicine) => (
             <MedicineCard
               key={medicine._id}
               medicine={medicine}
